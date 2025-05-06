@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Disposition - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-external-link-alt me-2"></i>Patient Disposition</h2>
+            <p class="text-muted">Determine patient discharge, transfer, or admission status</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ patient.triage.category }}">{{ patient.triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Diagnosis:</strong> {{ patient.doctor_examinations[0].assessment if patient.doctor_examinations else 'Not assessed' }}</p>
+                    <p class="mb-1"><strong>Plan:</strong> {{ patient.doctor_examinations[0].plan|truncate(50) if patient.doctor_examinations else 'Not assessed' }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="fas fa-directions me-2"></i>Disposition Decision</h5>
+                
+                <form method="POST" action="{{ url_for('transfer.disposition', patient_id=patient.id) }}">
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-thumbtack me-2"></i>Disposition Type</h4>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-3 mb-3 mb-md-0">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="disposition_type" id="disposition_discharge" value="discharge" {% if disposition and disposition.disposition_type == 'discharge' %}checked{% endif %} required>
+                                            <label class="form-check-label" for="disposition_discharge">
+                                                <i class="fas fa-home fa-2x mb-2"></i>
+                                                <h5>Discharge</h5>
+                                                <small class="text-muted">Patient can go home</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3 mb-md-0">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="disposition_type" id="disposition_outpatient" value="outpatient" {% if disposition and disposition.disposition_type == 'outpatient' %}checked{% endif %} required>
+                                            <label class="form-check-label" for="disposition_outpatient">
+                                                <i class="fas fa-clinic-medical fa-2x mb-2"></i>
+                                                <h5>Outpatient</h5>
+                                                <small class="text-muted">Follow-up with specialist</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3 mb-md-0">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="disposition_type" id="disposition_inpatient" value="inpatient" {% if disposition and disposition.disposition_type == 'inpatient' %}checked{% endif %} required>
+                                            <label class="form-check-label" for="disposition_inpatient">
+                                                <i class="fas fa-procedures fa-2x mb-2"></i>
+                                                <h5>Inpatient</h5>
+                                                <small class="text-muted">Admission to hospital</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3 mb-md-0">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="disposition_type" id="disposition_deceased" value="deceased" {% if disposition and disposition.disposition_type == 'deceased' %}checked{% endif %} required>
+                                            <label class="form-check-label" for="disposition_deceased">
+                                                <i class="fas fa-heart-broken fa-2x mb-2"></i>
+                                                <h5>Deceased</h5>
+                                                <small class="text-muted">Patient has expired</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Additional fields for each disposition type (initially hidden) -->
+                        <div id="discharge-fields" class="d-none">
+                            <!-- Will be populated in discharge_planning.html -->
+                        </div>
+                        
+                        <div id="outpatient-fields" class="d-none">
+                            <!-- Will be populated in outpatient_referral.html -->
+                        </div>
+                        
+                        <div id="inpatient-fields" class="d-none">
+                            <!-- Will be populated in inpatient_transfer.html -->
+                        </div>
+                        
+                        <div id="deceased-fields" class="d-none">
+                            <!-- Will be populated in mortality.html -->
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-signature me-2"></i>Authorization</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="authorized_by" class="form-label">Authorized By</label>
+                                <input type="text" class="form-control" id="authorized_by" name="authorized_by" value="{{ disposition.authorized_by if disposition else current_user.full_name }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="1">{{ disposition.notes if disposition else '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('emergency.nursing_care', patient_id=patient.id) }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Nursing Care
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save & Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

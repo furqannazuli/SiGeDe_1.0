@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Print ID Band - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-id-badge me-2"></i>Print Patient ID Band</h2>
+            <p class="text-muted">Generate and print patient identification band</p>
+        </div>
+        
+        <!-- Workflow Steps -->
+        <div class="workflow-steps mb-4">
+            <div class="workflow-step completed">
+                <div class="workflow-step-number">1</div>
+                <div class="workflow-step-name">Registration</div>
+            </div>
+            <div class="workflow-step completed">
+                <div class="workflow-step-number">2</div>
+                <div class="workflow-step-name">Insurance</div>
+            </div>
+            <div class="workflow-step active">
+                <div class="workflow-step-number">3</div>
+                <div class="workflow-step-name">ID Band</div>
+            </div>
+            <div class="workflow-step">
+                <div class="workflow-step-number">4</div>
+                <div class="workflow-step-name">Triage</div>
+            </div>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>Arrival:</strong> 
+                        {% if patient.arrival_mode == 'ambulance' %}
+                            <i class="fas fa-ambulance me-1"></i> Ambulance
+                        {% else %}
+                            <i class="fas fa-walking me-1"></i> Walk-in
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    {% if patient.medical_record_number %}
+                        <p class="mb-1"><strong>MRN:</strong> {{ patient.medical_record_number }}</p>
+                    {% endif %}
+                    <p class="mb-1"><strong>Insurance:</strong> {{ patient.insurance_type or 'Not specified' }}</p>
+                    <p class="mb-1"><strong>Registered:</strong> {{ patient.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-print me-2"></i>ID Band Preview</h5>
+                        <p class="card-text text-muted">This is how the patient ID band will appear when printed.</p>
+                        
+                        <!-- ID Band Preview (will be printed) -->
+                        <div id="printable-id-band">
+                            <div class="id-band">
+                                <div class="id-band-header">
+                                    <h5>SiGeDe EMERGENCY DEPARTMENT</h5>
+                                </div>
+                                <div class="id-band-content">
+                                    <div class="row mb-1">
+                                        <div class="col-5"><strong>Patient:</strong></div>
+                                        <div class="col-7">{{ patient.last_name }}, {{ patient.first_name }}</div>
+                                    </div>
+                                    <div class="row mb-1">
+                                        <div class="col-5"><strong>DOB:</strong></div>
+                                        <div class="col-7">{{ patient.date_of_birth.strftime('%d-%m-%Y') }} ({{ (patient.created_at.year - patient.date_of_birth.year)|int }} y)</div>
+                                    </div>
+                                    <div class="row mb-1">
+                                        <div class="col-5"><strong>MRN:</strong></div>
+                                        <div class="col-7">{{ patient.medical_record_number or 'Not assigned' }}</div>
+                                    </div>
+                                    <div class="row mb-1">
+                                        <div class="col-5"><strong>Admitted:</strong></div>
+                                        <div class="col-7">{{ patient.created_at.strftime('%d-%m-%Y %H:%M') }}</div>
+                                    </div>
+                                </div>
+                                <div class="id-band-footer">
+                                    EMERGENCY DEPARTMENT - {{ patient.insurance_type or 'Self-Pay' }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-3">
+                            <button id="print-id-band" class="btn btn-primary">
+                                <i class="fas fa-print me-1"></i> Print ID Band
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-tasks me-2"></i>Next Steps</h5>
+                        <p class="card-text text-muted">Follow these steps to complete the patient admission process:</p>
+                        
+                        <ol class="list-group list-group-numbered mb-3">
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">Print and attach the ID band</div>
+                                    Ensure the ID band is securely attached to the patient's wrist
+                                </div>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">Direct patient to the triage area</div>
+                                    Ask the patient to wait in the designated triage area
+                                </div>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">Notify triage nurse</div>
+                                    Inform the triage nurse about the new patient arrival
+                                </div>
+                            </li>
+                        </ol>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('emergency.triage', patient_id=patient.id) }}" class="btn btn-success">
+                                <i class="fas fa-chevron-right me-1"></i> Proceed to Triage
+                            </a>
+                            <a href="{{ url_for('admin.patient_registration') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-plus me-1"></i> Register New Patient
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

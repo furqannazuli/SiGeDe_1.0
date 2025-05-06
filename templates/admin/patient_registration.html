@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Registration - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-clipboard-list me-2"></i>Patient Registration</h2>
+            <p class="text-muted">Register new patients or enter referral information</p>
+        </div>
+        
+        <!-- Workflow Steps -->
+        <div class="workflow-steps mb-4">
+            <div class="workflow-step active">
+                <div class="workflow-step-number">1</div>
+                <div class="workflow-step-name">Registration</div>
+            </div>
+            <div class="workflow-step">
+                <div class="workflow-step-number">2</div>
+                <div class="workflow-step-name">Insurance</div>
+            </div>
+            <div class="workflow-step">
+                <div class="workflow-step-number">3</div>
+                <div class="workflow-step-name">ID Band</div>
+            </div>
+            <div class="workflow-step">
+                <div class="workflow-step-number">4</div>
+                <div class="workflow-step-name">Triage</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.patient_registration') }}">
+                    <!-- Arrival Mode Selection -->
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-ambulance me-2"></i>Mode of Arrival</h4>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="arrival_mode" id="arrival_ambulance" value="ambulance" required>
+                                    <label class="form-check-label" for="arrival_ambulance">
+                                        <i class="fas fa-ambulance me-1"></i> Ambulance
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="arrival_mode" id="arrival_walkin" value="walk-in" required>
+                                    <label class="form-check-label" for="arrival_walkin">
+                                        <i class="fas fa-walking me-1"></i> Walk-in
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ambulance Arrival Fields (Initially Hidden) -->
+                    <div id="ambulance-fields" class="form-section d-none">
+                        <h4 class="section-title"><i class="fas fa-file-medical me-2"></i>Referral Information</h4>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="medical_record_number" class="form-label">Medical Record Number</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="medical_record_number" name="medical_record_number">
+                                    <button type="button" class="btn btn-outline-secondary" id="generate-mrn-btn">
+                                        <i class="fas fa-sync-alt"></i> Generate
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="referral_source" class="form-label">Referral Source</label>
+                                <input type="text" class="form-control" id="referral_source" name="referral_source" placeholder="Hospital/Clinic name">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Walk-in Fields (Initially Hidden) -->
+                    <div id="walk-in-fields" class="form-section d-none">
+                        <h4 class="section-title"><i class="fas fa-info-circle me-2"></i>New Patient Information</h4>
+                        <p class="text-muted mb-3">Please collect detailed information for new patient records.</p>
+                    </div>
+                    
+                    <!-- Common Patient Information Fields -->
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-user me-2"></i>Patient Demographics</h4>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" required>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="date_of_birth" class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="gender" class="form-label">Gender</label>
+                                <select class="form-select" id="gender" name="gender" required>
+                                    <option value="" selected disabled>Select gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="phone_number" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone_number" name="phone_number">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="address" class="form-label">Address</label>
+                                <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Emergency Contact -->
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-phone-alt me-2"></i>Emergency Contact</h4>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="emergency_contact_name" class="form-label">Contact Name</label>
+                                <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="emergency_contact_phone" class="form-label">Contact Phone</label>
+                                <input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save & Continue to Insurance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

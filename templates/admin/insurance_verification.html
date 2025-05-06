@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Insurance Verification - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-id-card me-2"></i>Insurance Verification</h2>
+            <p class="text-muted">Verify patient insurance information</p>
+        </div>
+        
+        <!-- Workflow Steps -->
+        <div class="workflow-steps mb-4">
+            <div class="workflow-step completed">
+                <div class="workflow-step-number">1</div>
+                <div class="workflow-step-name">Registration</div>
+            </div>
+            <div class="workflow-step active">
+                <div class="workflow-step-number">2</div>
+                <div class="workflow-step-name">Insurance</div>
+            </div>
+            <div class="workflow-step">
+                <div class="workflow-step-number">3</div>
+                <div class="workflow-step-name">ID Band</div>
+            </div>
+            <div class="workflow-step">
+                <div class="workflow-step-number">4</div>
+                <div class="workflow-step-name">Triage</div>
+            </div>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>Arrival:</strong> 
+                        {% if patient.arrival_mode == 'ambulance' %}
+                            <i class="fas fa-ambulance me-1"></i> Ambulance
+                        {% else %}
+                            <i class="fas fa-walking me-1"></i> Walk-in
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    {% if patient.medical_record_number %}
+                        <p class="mb-1"><strong>MRN:</strong> {{ patient.medical_record_number }}</p>
+                    {% endif %}
+                    {% if patient.referral_source %}
+                        <p class="mb-1"><strong>Referral:</strong> {{ patient.referral_source }}</p>
+                    {% endif %}
+                    <p class="mb-1"><strong>Registered:</strong> {{ patient.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.insurance_verification', patient_id=patient.id) }}">
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-file-medical-alt me-2"></i>Insurance Information</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="insurance_type" class="form-label">Insurance Type</label>
+                                <select class="form-select" id="insurance_type" name="insurance_type" required>
+                                    <option value="" selected disabled>Select insurance type</option>
+                                    <option value="National Health Insurance">National Health Insurance</option>
+                                    <option value="Private Insurance">Private Insurance</option>
+                                    <option value="Medicare">Medicare</option>
+                                    <option value="Medicaid">Medicaid</option>
+                                    <option value="Self-Pay">Self-Pay (No Insurance)</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="insurance_number" class="form-label">Insurance/Policy Number</label>
+                                <input type="text" class="form-control" id="insurance_number" name="insurance_number">
+                                <div class="form-text">Leave blank for self-pay patients</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Additional fields that could be added in a real system -->
+                        <div class="row mb-3 d-none">
+                            <div class="col-md-6">
+                                <label for="policy_holder" class="form-label">Policy Holder (if not patient)</label>
+                                <input type="text" class="form-control" id="policy_holder" name="policy_holder">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="relation_to_patient" class="form-label">Relation to Patient</label>
+                                <select class="form-select" id="relation_to_patient" name="relation_to_patient">
+                                    <option value="Self" selected>Self</option>
+                                    <option value="Spouse">Spouse</option>
+                                    <option value="Parent">Parent</option>
+                                    <option value="Child">Child</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-check-circle me-2"></i>Verification Checklist</h4>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="id_verified" required>
+                            <label class="form-check-label" for="id_verified">
+                                Patient identification verified
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="insurance_verified" required>
+                            <label class="form-check-label" for="insurance_verified">
+                                Insurance card/information verified
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="consent_verified" required>
+                            <label class="form-check-label" for="consent_verified">
+                                Patient consent for treatment obtained
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('admin.patient_registration') }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Registration
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-id-badge me-1"></i> Save & Continue to ID Band
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

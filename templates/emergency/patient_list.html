@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Department - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-ambulance me-2"></i>Emergency Department</h2>
+            <p class="text-muted">Current patients requiring triage and treatment</p>
+        </div>
+        
+        <!-- New Patients (Not Triaged) -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>New Arrivals - Awaiting Triage</h5>
+            </div>
+            <div class="card-body">
+                {% if new_patients %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient Name</th>
+                                    <th>Age/Gender</th>
+                                    <th>Arrival Mode</th>
+                                    <th>Arrival Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in new_patients %}
+                                    <tr>
+                                        <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                                        <td>
+                                            {{ (patient.created_at.year - patient.date_of_birth.year)|int }}y/{{ patient.gender[0] }}
+                                        </td>
+                                        <td>
+                                            {% if patient.arrival_mode == 'ambulance' %}
+                                                <span class="badge bg-danger">Ambulance</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Walk-in</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ patient.created_at.strftime('%H:%M') }}</td>
+                                        <td>
+                                            <a href="{{ url_for('emergency.triage', patient_id=patient.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-clipboard-check me-1"></i> Triage
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> No new patients awaiting triage.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Triaged Patients -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-procedures me-2"></i>Active Patients</h5>
+            </div>
+            <div class="card-body">
+                {% if triaged_patients %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient Name</th>
+                                    <th>Age/Gender</th>
+                                    <th>Triage</th>
+                                    <th>Chief Complaint</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in triaged_patients %}
+                                    <tr>
+                                        <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                                        <td>
+                                            {{ (patient.created_at.year - patient.date_of_birth.year)|int }}y/{{ patient.gender[0] }}
+                                        </td>
+                                        <td>
+                                            <span class="triage-badge triage-{{ patient.triage.category }}">
+                                                {{ patient.triage.category|upper }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if patient.nurse_assessments %}
+                                                {{ patient.nurse_assessments[0].chief_complaint|truncate(30) }}
+                                            {% else %}
+                                                <em>Not assessed</em>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if patient.disposition %}
+                                                {% if patient.disposition.is_completed %}
+                                                    <span class="badge bg-success">Completed</span>
+                                                {% else %}
+                                                    <span class="badge bg-info">In Disposition</span>
+                                                {% endif %}
+                                            {% elif patient.prescriptions %}
+                                                <span class="badge bg-primary">Pharmacy</span>
+                                            {% elif patient.lab_requests and patient.lab_requests|selectattr('is_completed', 'equalto', false)|list %}
+                                                <span class="badge bg-info">Awaiting Labs</span>
+                                            {% elif patient.doctor_examinations %}
+                                                <span class="badge bg-primary">Doctor Examined</span>
+                                            {% elif patient.nurse_assessments %}
+                                                <span class="badge bg-warning text-dark">Nurse Assessed</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Triaged Only</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    Actions
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    {% if not patient.nurse_assessments %}
+                                                        <li><a class="dropdown-item" href="{{ url_for('emergency.nurse_assessment', patient_id=patient.id) }}">
+                                                            <i class="fas fa-stethoscope me-1"></i> Nursing Assessment
+                                                        </a></li>
+                                                    {% elif not patient.doctor_examinations %}
+                                                        <li><a class="dropdown-item" href="{{ url_for('emergency.doctor_examination', patient_id=patient.id) }}">
+                                                            <i class="fas fa-user-md me-1"></i> Doctor Examination
+                                                        </a></li>
+                                                    {% elif patient.doctor_examinations[0].requires_lab_tests and patient.lab_requests|selectattr('is_completed', 'equalto', false)|list %}
+                                                        <li><a class="dropdown-item" href="{{ url_for('emergency.lab_request', patient_id=patient.id) }}">
+                                                            <i class="fas fa-vial me-1"></i> Lab Requests
+                                                        </a></li>
+                                                    {% elif not patient.disposition %}
+                                                        <li><a class="dropdown-item" href="{{ url_for('emergency.nursing_care', patient_id=patient.id) }}">
+                                                            <i class="fas fa-user-nurse me-1"></i> Nursing Care
+                                                        </a></li>
+                                                        <li><a class="dropdown-item" href="{{ url_for('emergency.pharmacy', patient_id=patient.id) }}">
+                                                            <i class="fas fa-pills me-1"></i> Pharmacy
+                                                        </a></li>
+                                                        <li><a class="dropdown-item" href="{{ url_for('transfer.disposition', patient_id=patient.id) }}">
+                                                            <i class="fas fa-external-link-alt me-1"></i> Disposition
+                                                        </a></li>
+                                                    {% elif not patient.disposition.is_completed %}
+                                                        <li><a class="dropdown-item" href="{{ url_for('transfer.disposition', patient_id=patient.id) }}">
+                                                            <i class="fas fa-external-link-alt me-1"></i> Continue Disposition
+                                                        </a></li>
+                                                    {% endif %}
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item" href="{{ url_for('emergency.nursing_care', patient_id=patient.id) }}">
+                                                        <i class="fas fa-clipboard me-1"></i> View Summary
+                                                    </a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> No patients in active treatment.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

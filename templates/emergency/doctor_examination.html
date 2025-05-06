@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Doctor Examination - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-user-md me-2"></i>Doctor Examination</h2>
+            <p class="text-muted">Medical assessment and treatment plan</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ triage.category }}">{{ triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Chief Complaint:</strong> {{ nurse_assessment.chief_complaint }}</p>
+                    <p class="mb-1">
+                        <strong>Vital Signs:</strong> 
+                        T: {{ nurse_assessment.vital_signs.temperature }}°C, 
+                        HR: {{ nurse_assessment.vital_signs.heart_rate }}, 
+                        BP: {{ nurse_assessment.vital_signs.blood_pressure }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('emergency.doctor_examination', patient_id=patient.id) }}" data-autosave="true">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0"><i class="fas fa-stethoscope me-2"></i>Medical Examination</h5>
+                        <span class="autosave-indicator">Saving...</span>
+                    </div>
+                    
+                    <!-- SOAP Format -->
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-comment me-2"></i>Subjective</h4>
+                        <div class="mb-3">
+                            <textarea class="form-control" id="subjective" name="subjective" rows="3">{{ examination.subjective if examination else nurse_assessment.chief_complaint }}</textarea>
+                            <div class="form-text">Patient's reported symptoms and concerns</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-eye me-2"></i>Objective</h4>
+                        <div class="mb-3">
+                            <textarea class="form-control" id="objective" name="objective" rows="4">{{ examination.objective if examination else '' }}</textarea>
+                            <div class="form-text">Physical examination findings, lab results, observable data</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-clipboard-check me-2"></i>Assessment</h4>
+                        <div class="mb-3">
+                            <textarea class="form-control" id="assessment" name="assessment" rows="3" required>{{ examination.assessment if examination else '' }}</textarea>
+                            <div class="form-text">Diagnosis or clinical impression</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-list-ul me-2"></i>Plan</h4>
+                        <div class="mb-3">
+                            <textarea class="form-control" id="plan" name="plan" rows="4" required>{{ examination.plan if examination else '' }}</textarea>
+                            <div class="form-text">Treatment plan, medications, interventions, follow-up</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Lab/Radiology Requests -->
+                    <div class="form-section">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="requires_lab_tests" name="requires_lab_tests" {% if examination and examination.requires_lab_tests %}checked{% endif %}>
+                            <label class="form-check-label" for="requires_lab_tests">
+                                <i class="fas fa-vial me-1"></i> Patient requires laboratory/radiology tests
+                            </label>
+                        </div>
+                        
+                        <div id="lab-tests-section" class="{% if not examination or not examination.requires_lab_tests %}d-none{% endif %}">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> You will be redirected to the lab request form after saving this examination.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Doctor Information -->
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-user-md me-2"></i>Physician Information</h4>
+                        <div class="mb-3">
+                            <label for="doctor_name" class="form-label">Doctor Name</label>
+                            <input type="text" class="form-control" id="doctor_name" name="doctor_name" value="{{ examination.doctor_name if examination else '' }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('emergency.nurse_assessment', patient_id=patient.id) }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Nursing Assessment
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save & Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

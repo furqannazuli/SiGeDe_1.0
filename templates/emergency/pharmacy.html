@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Pharmacy - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-pills me-2"></i>Pharmacy Services</h2>
+            <p class="text-muted">Medication prescription and dispensing</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ patient.triage.category }}">{{ patient.triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Allergies:</strong> {{ patient.nurse_assessments[0].allergies or 'No known allergies' if patient.nurse_assessments else 'Not assessed' }}</p>
+                    <p class="mb-1"><strong>Diagnosis:</strong> {{ patient.doctor_examinations[0].assessment if patient.doctor_examinations else 'Not assessed' }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Prescription Form -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-prescription me-2"></i>New Prescription</h5>
+                        
+                        <form method="POST" action="{{ url_for('emergency.pharmacy', patient_id=patient.id) }}">
+                            <div class="form-section">
+                                <div class="mb-3">
+                                    <label for="medication_name" class="form-label">Medication Name</label>
+                                    <input type="text" class="form-control" id="medication_name" name="medication_name" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="dosage" class="form-label">Dosage</label>
+                                    <input type="text" class="form-control" id="dosage" name="dosage" placeholder="e.g., 500mg" required>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="route" class="form-label">Route</label>
+                                        <select class="form-select" id="route" name="route" required>
+                                            <option value="" selected disabled>Select route</option>
+                                            <option value="Oral">Oral</option>
+                                            <option value="IV">Intravenous (IV)</option>
+                                            <option value="IM">Intramuscular (IM)</option>
+                                            <option value="SC">Subcutaneous (SC)</option>
+                                            <option value="Topical">Topical</option>
+                                            <option value="Inhalation">Inhalation</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="frequency" class="form-label">Frequency</label>
+                                        <select class="form-select" id="frequency" name="frequency" required>
+                                            <option value="" selected disabled>Select frequency</option>
+                                            <option value="Once">Once only</option>
+                                            <option value="PRN">As needed (PRN)</option>
+                                            <option value="Daily">Once daily</option>
+                                            <option value="BID">Twice daily (BID)</option>
+                                            <option value="TID">Three times daily (TID)</option>
+                                            <option value="QID">Four times daily (QID)</option>
+                                            <option value="q4h">Every 4 hours</option>
+                                            <option value="q6h">Every 6 hours</option>
+                                            <option value="q8h">Every 8 hours</option>
+                                            <option value="q12h">Every 12 hours</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="duration" class="form-label">Duration</label>
+                                    <input type="text" class="form-control" id="duration" name="duration" placeholder="e.g., 7 days, until discharge">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="special_instructions" class="form-label">Special Instructions</label>
+                                    <textarea class="form-control" id="special_instructions" name="special_instructions" rows="2"></textarea>
+                                    <div class="form-text">Additional instructions for administration or patient education</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="prescribed_by" class="form-label">Prescribed By</label>
+                                    <input type="text" class="form-control" id="prescribed_by" name="prescribed_by" required>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle me-1"></i> Add Prescription
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Medication List -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-list-alt me-2"></i>Prescribed Medications</h5>
+                        
+                        {% if prescriptions %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Medication</th>
+                                            <th>Dosage & Route</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for prescription in prescriptions %}
+                                            <tr>
+                                                <td>{{ prescription.medication_name }}</td>
+                                                <td>{{ prescription.dosage }} {{ prescription.route }}, {{ prescription.frequency }}</td>
+                                                <td>
+                                                    {% if prescription.is_dispensed %}
+                                                        <span class="badge bg-success">Dispensed</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning text-dark">Pending</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if not prescription.is_dispensed %}
+                                                        <form method="POST" action="{{ url_for('emergency.dispense_medication', prescription_id=prescription.id) }}" class="d-inline">
+                                                            <input type="hidden" name="dispensed_by" value="{{ current_user.full_name }}">
+                                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                                <i class="fas fa-check-circle me-1"></i> Dispense
+                                                            </button>
+                                                        </form>
+                                                    {% else %}
+                                                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                            <i class="fas fa-check me-1"></i> Dispensed
+                                                        </button>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i> Medications must be dispensed by pharmacy staff before administration.
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> No medications have been prescribed yet.
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{{ url_for('emergency.nursing_care', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Back to Nursing Care
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

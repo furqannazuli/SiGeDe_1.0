@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Nursing Care - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-user-nurse me-2"></i>Nursing Care</h2>
+            <p class="text-muted">Ongoing nursing care and patient monitoring</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ triage.category }}">{{ triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Chief Complaint:</strong> {{ nurse_assessment.chief_complaint }}</p>
+                    <p class="mb-1"><strong>Diagnosis:</strong> {{ doctor_examination.assessment }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Patient Care Summary -->
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-clipboard-list me-2"></i>Patient Care Summary</h5>
+                        
+                        <!-- Vital Signs -->
+                        <div class="form-section">
+                            <h4 class="section-title"><i class="fas fa-heartbeat me-2"></i>Vital Signs</h4>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Temperature</th>
+                                            <th>Heart Rate</th>
+                                            <th>Resp. Rate</th>
+                                            <th>Blood Pressure</th>
+                                            <th>O2 Saturation</th>
+                                            <th>Pain Level</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{{ nurse_assessment.vital_signs.temperature }}°C</td>
+                                            <td>{{ nurse_assessment.vital_signs.heart_rate }} bpm</td>
+                                            <td>{{ nurse_assessment.vital_signs.respiratory_rate }} rpm</td>
+                                            <td>{{ nurse_assessment.vital_signs.blood_pressure }}</td>
+                                            <td>{{ nurse_assessment.vital_signs.oxygen_saturation }}%</td>
+                                            <td>{{ nurse_assessment.vital_signs.pain_level }}/10</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Doctor's Plan -->
+                        <div class="form-section">
+                            <h4 class="section-title"><i class="fas fa-user-md me-2"></i>Treatment Plan</h4>
+                            <p>{{ doctor_examination.plan }}</p>
+                        </div>
+                        
+                        <!-- Lab Results Summary -->
+                        {% if lab_requests %}
+                            <div class="form-section">
+                                <h4 class="section-title"><i class="fas fa-vial me-2"></i>Laboratory & Radiology Results</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Test Name</th>
+                                                <th>Type</th>
+                                                <th>Completed</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for request in lab_requests %}
+                                                <tr>
+                                                    <td>{{ request.test_name }}</td>
+                                                    <td>
+                                                        {% if request.test_type == 'laboratory' %}
+                                                            <span class="badge bg-info">Lab</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark">Radiology</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if request.is_completed %}
+                                                            <span class="badge bg-success">Yes</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">Pending</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if request.is_completed %}
+                                                            <a href="{{ url_for('emergency.lab_results', request_id=request.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                                <i class="fas fa-eye me-1"></i> View
+                                                            </a>
+                                                        {% else %}
+                                                            <a href="{{ url_for('emergency.lab_results', request_id=request.id) }}" class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-clipboard-check me-1"></i> Enter Results
+                                                            </a>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Allergies and Medications -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-section">
+                                    <h4 class="section-title"><i class="fas fa-allergies me-2"></i>Allergies</h4>
+                                    <p>{{ nurse_assessment.allergies or 'No known allergies' }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-section">
+                                    <h4 class="section-title"><i class="fas fa-pills me-2"></i>Current Medications</h4>
+                                    <p>{{ nurse_assessment.medications or 'None reported' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions Sidebar -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-tasks me-2"></i>Nursing Actions</h5>
+                        
+                        <div class="d-grid gap-3">
+                            <a href="{{ url_for('emergency.pharmacy', patient_id=patient.id) }}" class="btn btn-primary">
+                                <i class="fas fa-pills me-2"></i> Medication Management
+                            </a>
+                            
+                            {% if not lab_requests or lab_requests|selectattr('is_completed', 'equalto', false)|list %}
+                                <a href="{{ url_for('emergency.lab_request', patient_id=patient.id) }}" class="btn btn-info">
+                                    <i class="fas fa-vial me-2"></i> Manage Lab Requests
+                                </a>
+                            {% endif %}
+                            
+                            <div class="form-section">
+                                <h6 class="section-title">Patient Monitoring</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="vitalsCheck">
+                                    <label class="form-check-label" for="vitalsCheck">
+                                        Regular vital signs monitoring
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="fluidCheck">
+                                    <label class="form-check-label" for="fluidCheck">
+                                        IV fluid administration
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="oxygenCheck">
+                                    <label class="form-check-label" for="oxygenCheck">
+                                        Oxygen administration
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="painCheck">
+                                    <label class="form-check-label" for="painCheck">
+                                        Pain assessment
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <a href="{{ url_for('transfer.disposition', patient_id=patient.id) }}" class="btn btn-success">
+                                <i class="fas fa-external-link-alt me-2"></i> Proceed to Disposition
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

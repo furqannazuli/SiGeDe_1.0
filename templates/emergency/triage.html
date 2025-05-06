@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Triage - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-clipboard-check me-2"></i>Patient Triage</h2>
+            <p class="text-muted">Assess patient urgency and assign triage category</p>
+        </div>
+        
+        <!-- Workflow Steps -->
+        <div class="workflow-steps mb-4">
+            <div class="workflow-step completed">
+                <div class="workflow-step-number">1</div>
+                <div class="workflow-step-name">Registration</div>
+            </div>
+            <div class="workflow-step completed">
+                <div class="workflow-step-number">2</div>
+                <div class="workflow-step-name">Insurance</div>
+            </div>
+            <div class="workflow-step completed">
+                <div class="workflow-step-number">3</div>
+                <div class="workflow-step-name">ID Band</div>
+            </div>
+            <div class="workflow-step active">
+                <div class="workflow-step-number">4</div>
+                <div class="workflow-step-name">Triage</div>
+            </div>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>Arrival:</strong> 
+                        {% if patient.arrival_mode == 'ambulance' %}
+                            <i class="fas fa-ambulance me-1"></i> Ambulance
+                        {% else %}
+                            <i class="fas fa-walking me-1"></i> Walk-in
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    {% if patient.medical_record_number %}
+                        <p class="mb-1"><strong>MRN:</strong> {{ patient.medical_record_number }}</p>
+                    {% endif %}
+                    <p class="mb-1"><strong>Insurance:</strong> {{ patient.insurance_type or 'Not specified' }}</p>
+                    <p class="mb-1"><strong>Registered:</strong> {{ patient.created_at.strftime('%d-%m-%Y %H:%M') }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('emergency.triage', patient_id=patient.id) }}">
+                    <!-- Triage Category Selection -->
+                    <div class="form-section">
+                        <h4 class="section-title d-flex justify-content-between">
+                            <span><i class="fas fa-exclamation-triangle me-2"></i>Triage Category</span>
+                            <span id="triage-display" class="triage-badge">Select Category</span>
+                        </h4>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-3 mb-3 mb-md-0">
+                                <div class="card triage-red h-100">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="triage_category" id="triage_red" value="red" required>
+                                            <label class="form-check-label" for="triage_red">
+                                                <h5>RED</h5>
+                                                <p class="mb-0">Priority 1</p>
+                                                <small>Immediate attention</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3 mb-md-0">
+                                <div class="card triage-yellow h-100">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="triage_category" id="triage_yellow" value="yellow" required>
+                                            <label class="form-check-label" for="triage_yellow">
+                                                <h5>YELLOW</h5>
+                                                <p class="mb-0">Priority 2</p>
+                                                <small>&lt;15 minutes</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3 mb-md-0">
+                                <div class="card triage-green h-100">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="triage_category" id="triage_green" value="green" required>
+                                            <label class="form-check-label" for="triage_green">
+                                                <h5>GREEN</h5>
+                                                <p class="mb-0">Priority 3</p>
+                                                <small>&lt;60 minutes</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card triage-black h-100">
+                                    <div class="card-body text-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="triage_category" id="triage_black" value="black" required>
+                                            <label class="form-check-label" for="triage_black">
+                                                <h5>BLACK</h5>
+                                                <p class="mb-0">Priority 0</p>
+                                                <small>Deceased</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="triage_reason" class="form-label">Triage Reason</label>
+                            <textarea class="form-control" id="triage_reason" name="triage_reason" rows="2" required></textarea>
+                            <div class="form-text">Briefly describe the main reason for the selected triage category</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vital Signs -->
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-heartbeat me-2"></i>Vital Signs</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label for="temperature" class="form-label">Temperature (°C)</label>
+                                <input type="number" class="form-control" id="temperature" name="temperature" step="0.1" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="heart_rate" class="form-label">Heart Rate (bpm)</label>
+                                <input type="number" class="form-control" id="heart_rate" name="heart_rate" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="respiratory_rate" class="form-label">Respiratory Rate (rpm)</label>
+                                <input type="number" class="form-control" id="respiratory_rate" name="respiratory_rate" required>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label for="blood_pressure" class="form-label">Blood Pressure (mmHg)</label>
+                                <input type="text" class="form-control" id="blood_pressure" name="blood_pressure" placeholder="120/80" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="oxygen_saturation" class="form-label">Oxygen Saturation (%)</label>
+                                <input type="number" class="form-control" id="oxygen_saturation" name="oxygen_saturation" min="0" max="100" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="pain_level" class="form-label">Pain Level (0-10)</label>
+                                <input type="number" class="form-control" id="pain_level" name="pain_level" min="0" max="10" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('emergency.patient_list') }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Patient List
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save & Continue to Nursing Assessment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Lab Request - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-vial me-2"></i>Laboratory & Radiology Requests</h2>
+            <p class="text-muted">Order laboratory tests and radiological examinations</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ patient.triage.category }}">{{ patient.triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Chief Complaint:</strong> {{ patient.nurse_assessments[0].chief_complaint if patient.nurse_assessments else 'Not assessed' }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Request Form -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-file-medical me-2"></i>New Test Request</h5>
+                        
+                        <form method="POST" action="{{ url_for('emergency.lab_request', patient_id=patient.id) }}">
+                            <div class="form-section">
+                                <div class="mb-3">
+                                    <label for="test_type" class="form-label">Test Type</label>
+                                    <select class="form-select" id="test_type" name="test_type" required>
+                                        <option value="" selected disabled>Select test type</option>
+                                        <option value="laboratory">Laboratory Test</option>
+                                        <option value="radiology">Radiology Examination</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="test_name" class="form-label">Test Name</label>
+                                    <input type="text" class="form-control" id="test_name" name="test_name" required>
+                                    <div class="form-text">Specify the exact test or examination name</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="priority" class="form-label">Priority</label>
+                                    <select class="form-select" id="priority" name="priority" required>
+                                        <option value="routine">Routine</option>
+                                        <option value="urgent">Urgent</option>
+                                        <option value="stat">STAT (Emergency)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="clinical_info" class="form-label">Clinical Information</label>
+                                    <textarea class="form-control" id="clinical_info" name="clinical_info" rows="3"></textarea>
+                                    <div class="form-text">Relevant clinical information to assist interpretation</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="requested_by" class="form-label">Requested By</label>
+                                    <input type="text" class="form-control" id="requested_by" name="requested_by" value="{{ current_user.full_name }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle me-1"></i> Add Test Request
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Existing Requests -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-list-alt me-2"></i>Test Requests</h5>
+                        
+                        {% if lab_requests %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Test</th>
+                                            <th>Type</th>
+                                            <th>Priority</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for request in lab_requests %}
+                                            <tr>
+                                                <td>{{ request.test_name }}</td>
+                                                <td>
+                                                    {% if request.test_type == 'laboratory' %}
+                                                        <span class="badge bg-info">Lab</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning text-dark">Radiology</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if request.priority == 'stat' %}
+                                                        <span class="badge bg-danger">STAT</span>
+                                                    {% elif request.priority == 'urgent' %}
+                                                        <span class="badge bg-warning text-dark">Urgent</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Routine</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if request.is_completed %}
+                                                        <span class="badge bg-success">Completed</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Pending</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if not request.is_completed %}
+                                                        <a href="{{ url_for('emergency.lab_results', request_id=request.id) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-clipboard-check me-1"></i> Enter Results
+                                                        </a>
+                                                    {% else %}
+                                                        <a href="{{ url_for('emergency.lab_results', request_id=request.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fas fa-eye me-1"></i> View Results
+                                                        </a>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> No test requests have been created yet.
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{{ url_for('emergency.doctor_examination', patient_id=patient.id) }}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-arrow-left me-1"></i> Back to Examination
+                            </a>
+                            
+                            {% if lab_requests and not lab_requests|selectattr('is_completed', 'equalto', false)|list %}
+                                <a href="{{ url_for('emergency.nursing_care', patient_id=patient.id) }}" class="btn btn-success">
+                                    <i class="fas fa-check-circle me-1"></i> All Tests Complete - Continue
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if pending_external_results %}
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-cloud-download-alt me-2"></i>
+                            Pending External Results
+                            <span class="badge bg-info ms-2">{{ pending_external_results|length }}</span>
+                        </h5>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            These results have been received from external laboratory systems but have not been matched to any lab requests yet.
+                            They will be automatically matched when a new lab request with matching test type and name is created.
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>External ID</th>
+                                        <th>Test Type</th>
+                                        <th>Test Name</th>
+                                        <th>Result Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in pending_external_results %}
+                                    <tr>
+                                        <td>{{ result.external_system_id }}</td>
+                                        <td>
+                                            {% if result.test_type == 'laboratory' %}
+                                                <span class="badge bg-info">Lab</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">Radiology</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ result.test_name }}</td>
+                                        <td>{{ result.result_date.strftime('%d-%m-%Y %H:%M') }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#externalResultModal-{{ result.id }}">
+                                                <i class="fas fa-eye me-1"></i> View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {% for result in pending_external_results %}
+                        <div class="modal fade" id="externalResultModal-{{ result.id }}" tabindex="-1" aria-labelledby="externalResultModalLabel-{{ result.id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="externalResultModalLabel-{{ result.id }}">External Result Details</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p><strong>External ID:</strong> {{ result.external_system_id }}</p>
+                                                <p><strong>Patient MRN:</strong> {{ result.patient_mrn }}</p>
+                                                <p><strong>Test Type:</strong> {{ result.test_type|capitalize }}</p>
+                                                <p><strong>Test Name:</strong> {{ result.test_name }}</p>
+                                                <p><strong>Result Date:</strong> {{ result.result_date.strftime('%d-%m-%Y %H:%M') }}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="card">
+                                                    <div class="card-header">
+                                                        Result
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <pre class="mb-0">{{ result.result }}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

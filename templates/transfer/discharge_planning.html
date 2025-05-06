@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Discharge Planning - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-home me-2"></i>Discharge Planning</h2>
+            <p class="text-muted">Prepare patient for discharge from the emergency department</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ patient.triage.category }}">{{ patient.triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Diagnosis:</strong> {{ patient.doctor_examinations[0].assessment if patient.doctor_examinations else 'Not assessed' }}</p>
+                    <p class="mb-1"><strong>Disposition:</strong> <span class="badge bg-success">Discharge Home</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-clipboard-list me-2"></i>Discharge Instructions</h5>
+                        
+                        <form method="POST" action="{{ url_for('transfer.discharge_planning', patient_id=patient.id) }}">
+                            <div id="printable-discharge">
+                                <div class="form-section">
+                                    <h4 class="section-title"><i class="fas fa-info-circle me-2"></i>Discharge Instructions</h4>
+                                    <div class="mb-3">
+                                        <label for="discharge_instructions" class="form-label">Patient Care Instructions</label>
+                                        <textarea class="form-control" id="discharge_instructions" name="discharge_instructions" rows="6" required>{{ disposition.discharge_instructions if disposition.discharge_instructions else '' }}</textarea>
+                                        <div class="form-text">Detailed instructions for the patient to follow at home</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-section">
+                                    <h4 class="section-title"><i class="fas fa-calendar-alt me-2"></i>Follow-up Plan</h4>
+                                    <div class="mb-3">
+                                        <label for="follow_up_plan" class="form-label">Follow-up Recommendations</label>
+                                        <textarea class="form-control" id="follow_up_plan" name="follow_up_plan" rows="4" required>{{ disposition.follow_up_plan if disposition.follow_up_plan else '' }}</textarea>
+                                        <div class="form-text">Specify any follow-up appointments, consultations, or monitoring required</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-section">
+                                    <h4 class="section-title"><i class="fas fa-pills me-2"></i>Medications</h4>
+                                    {% if patient.prescriptions %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Medication</th>
+                                                        <th>Dosage</th>
+                                                        <th>Route</th>
+                                                        <th>Frequency</th>
+                                                        <th>Duration</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for prescription in patient.prescriptions %}
+                                                        <tr>
+                                                            <td>{{ prescription.medication_name }}</td>
+                                                            <td>{{ prescription.dosage }}</td>
+                                                            <td>{{ prescription.route }}</td>
+                                                            <td>{{ prescription.frequency }}</td>
+                                                            <td>{{ prescription.duration or 'As directed' }}</td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted"><em>No medications prescribed.</em></p>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="form-section">
+                                    <h4 class="section-title"><i class="fas fa-exclamation-triangle me-2"></i>Return to Hospital If</h4>
+                                    <ul>
+                                        <li>Symptoms worsen or new symptoms develop</li>
+                                        <li>Fever above 38.5°C (101.3°F)</li>
+                                        <li>Severe pain that is not relieved by prescribed medication</li>
+                                        <li>Difficulty breathing</li>
+                                        <li>Any other concerning symptoms</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                                <a href="{{ url_for('transfer.disposition', patient_id=patient.id) }}" class="btn btn-outline-secondary me-md-2">
+                                    <i class="fas fa-arrow-left me-1"></i> Back to Disposition
+                                </a>
+                                <button type="button" id="print-discharge" class="btn btn-outline-primary me-md-2">
+                                    <i class="fas fa-print me-1"></i> Print Instructions
+                                </button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-check-circle me-1"></i> Complete Discharge
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-tasks me-2"></i>Discharge Checklist</h5>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="check_medications">
+                            <label class="form-check-label" for="check_medications">
+                                Medications dispensed/prescriptions provided
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="check_instructions">
+                            <label class="form-check-label" for="check_instructions">
+                                Discharge instructions reviewed with patient
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="check_followup">
+                            <label class="form-check-label" for="check_followup">
+                                Follow-up appointments scheduled
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="check_understanding">
+                            <label class="form-check-label" for="check_understanding">
+                                Patient/family verbalizes understanding
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="check_transportation">
+                            <label class="form-check-label" for="check_transportation">
+                                Transportation arranged
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="check_belongings">
+                            <label class="form-check-label" for="check_belongings">
+                                Personal belongings returned
+                            </label>
+                        </div>
+                        
+                        <div class="alert alert-info mt-4">
+                            <i class="fas fa-info-circle me-2"></i> Completing this discharge will transfer all patient data to the central EMR system.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

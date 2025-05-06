@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Inpatient Transfer - SiGeDe EMR{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/bed_selector.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-procedures me-2"></i>Inpatient Transfer</h2>
+            <p class="text-muted">Transfer patient to hospital ward for continued care</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ patient.triage.category }}">{{ patient.triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Diagnosis:</strong> {{ patient.doctor_examinations[0].assessment if patient.doctor_examinations else 'Not assessed' }}</p>
+                    <p class="mb-1"><strong>Disposition:</strong> <span class="badge bg-primary">Inpatient Admission</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="fas fa-exchange-alt me-2"></i>Inpatient Transfer Information</h5>
+                
+                <form method="POST" action="{{ url_for('transfer.inpatient_transfer', patient_id=patient.id) }}">
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-hospital me-2"></i>Transfer Details</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="destination_ward" class="form-label">Destination Ward</label>
+                                <select class="form-select" id="destination_ward" name="destination_ward" required>
+                                    <option value="" {% if not disposition.destination_ward %}selected{% endif %} disabled>Select ward</option>
+                                    <option value="General Medicine" {% if disposition.destination_ward == 'General Medicine' %}selected{% endif %}>General Medicine</option>
+                                    <option value="Cardiology" {% if disposition.destination_ward == 'Cardiology' %}selected{% endif %}>Cardiology</option>
+                                    <option value="Neurology" {% if disposition.destination_ward == 'Neurology' %}selected{% endif %}>Neurology</option>
+                                    <option value="Orthopedics" {% if disposition.destination_ward == 'Orthopedics' %}selected{% endif %}>Orthopedics</option>
+                                    <option value="Surgery" {% if disposition.destination_ward == 'Surgery' %}selected{% endif %}>Surgery</option>
+                                    <option value="Pediatrics" {% if disposition.destination_ward == 'Pediatrics' %}selected{% endif %}>Pediatrics</option>
+                                    <option value="Obstetrics" {% if disposition.destination_ward == 'Obstetrics' %}selected{% endif %}>Obstetrics</option>
+                                    <option value="Gynecology" {% if disposition.destination_ward == 'Gynecology' %}selected{% endif %}>Gynecology</option>
+                                    <option value="Oncology" {% if disposition.destination_ward == 'Oncology' %}selected{% endif %}>Oncology</option>
+                                    <option value="Pulmonology" {% if disposition.destination_ward == 'Pulmonology' %}selected{% endif %}>Pulmonology</option>
+                                    <option value="Nephrology" {% if disposition.destination_ward == 'Nephrology' %}selected{% endif %}>Nephrology</option>
+                                    <option value="Gastroenterology" {% if disposition.destination_ward == 'Gastroenterology' %}selected{% endif %}>Gastroenterology</option>
+                                    <option value="Intensive Care" {% if disposition.destination_ward == 'Intensive Care' %}selected{% endif %}>Intensive Care Unit (ICU)</option>
+                                    <option value="Coronary Care" {% if disposition.destination_ward == 'Coronary Care' %}selected{% endif %}>Coronary Care Unit (CCU)</option>
+                                    <option value="Neonatal ICU" {% if disposition.destination_ward == 'Neonatal ICU' %}selected{% endif %}>Neonatal ICU (NICU)</option>
+                                    <option value="Psychiatric" {% if disposition.destination_ward == 'Psychiatric' %}selected{% endif %}>Psychiatric</option>
+                                    <option value="Rehabilitation" {% if disposition.destination_ward == 'Rehabilitation' %}selected{% endif %}>Rehabilitation</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="bed_number" class="form-label">Bed Number</label>
+                                <input type="text" class="form-control" id="bed_number" name="bed_number" placeholder="e.g., B-203" value="{{ disposition.bed_number if disposition.bed_number else '' }}">
+                                <div class="form-text">Select a bed from the visualization below or enter manually</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Bed Selection Visualization -->
+                        <div id="bed-selection-container" class="form-section">
+                            <h4 class="section-title"><i class="fas fa-bed me-2"></i>Bed Selection Visualization</h4>
+                            <p class="mb-3">Select a ward above to view available beds and make a selection</p>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Is a bed currently available?</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="is_bed_available" id="bed_available_yes" value="yes" {% if disposition.is_bed_available %}checked{% endif %} required>
+                                    <label class="form-check-label" for="bed_available_yes">
+                                        Yes, bed is available now
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="is_bed_available" id="bed_available_no" value="no" {% if disposition.is_bed_available is sameas false %}checked{% endif %} required>
+                                    <label class="form-check-label" for="bed_available_no">
+                                        No, patient needs to be added to waiting list
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Waiting List Fields (shown only when no bed is available) -->
+                        <div id="waiting-list-fields" class="{% if not disposition or disposition.is_bed_available is not sameas false %}d-none{% endif %}">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i> No beds are currently available. Patient will be placed on waiting list.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="waiting_list_position" class="form-label">Waiting List Priority (1-10)</label>
+                                <input type="number" class="form-control" id="waiting_list_position" name="waiting_list_position" min="1" max="10" value="{{ disposition.waiting_list_position if disposition.waiting_list_position else '5' }}">
+                                <div class="form-text">1 = Highest priority, 10 = Lowest priority</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-clipboard-list me-2"></i>Transfer Checklist</h4>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="check_orders">
+                                    <label class="form-check-label" for="check_orders">
+                                        Admission orders written
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="check_labs">
+                                    <label class="form-check-label" for="check_labs">
+                                        Lab results reviewed
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="check_meds">
+                                    <label class="form-check-label" for="check_meds">
+                                        Medications reconciled
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="check_vitals">
+                                    <label class="form-check-label" for="check_vitals">
+                                        Vital signs stable for transfer
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="check_receiving">
+                                    <label class="form-check-label" for="check_receiving">
+                                        Receiving unit notified
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="check_family">
+                                    <label class="form-check-label" for="check_family">
+                                        Family notified of transfer
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('transfer.disposition', patient_id=patient.id) }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Disposition
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check-circle me-1"></i> Complete Transfer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

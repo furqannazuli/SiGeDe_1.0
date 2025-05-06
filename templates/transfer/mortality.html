@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Mortality Documentation - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-heart-broken me-2"></i>Mortality Documentation</h2>
+            <p class="text-muted">Document patient death and post-mortem processing</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ patient.triage.category }}">{{ patient.triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Emergency Contact:</strong> {{ patient.emergency_contact_name or 'Not provided' }}</p>
+                    <p class="mb-1"><strong>Contact Phone:</strong> {{ patient.emergency_contact_phone or 'Not provided' }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="fas fa-file-medical-alt me-2"></i>Death Certificate Information</h5>
+                
+                <form method="POST" action="{{ url_for('transfer.mortality', patient_id=patient.id) }}">
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-clock me-2"></i>Time and Cause</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="time_of_death" class="form-label">Time of Death</label>
+                                <input type="datetime-local" class="form-control" id="time_of_death" name="time_of_death" value="{{ disposition.time_of_death.strftime('%Y-%m-%dT%H:%M') if disposition.time_of_death else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="cause_of_death" class="form-label">Immediate Cause of Death</label>
+                                <input type="text" class="form-control" id="cause_of_death" name="cause_of_death" value="{{ disposition.cause_of_death if disposition.cause_of_death else '' }}" required>
+                                <div class="form-text">Primary condition leading directly to death</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-clipboard-check me-2"></i>Certification</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="death_confirmed" required>
+                                    <label class="form-check-label" for="death_confirmed">
+                                        I confirm that this patient has been examined and declared deceased at the time indicated above.
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="family_notified">
+                                    <label class="form-check-label" for="family_notified">
+                                        Family/next of kin has been notified
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="morgue_notified">
+                                    <label class="form-check-label" for="morgue_notified">
+                                        Morgue has been notified
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="belongings_processed">
+                                    <label class="form-check-label" for="belongings_processed">
+                                        Patient's belongings have been processed and documented
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-question-circle me-2"></i>Additional Information</h4>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Was death expected based on patient's condition?</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="death_expected" id="death_expected_yes" value="yes">
+                                <label class="form-check-label" for="death_expected_yes">Yes</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="death_expected" id="death_expected_no" value="no">
+                                <label class="form-check-label" for="death_expected_no">No</label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Is autopsy requested or required?</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="autopsy_required" id="autopsy_yes" value="yes">
+                                <label class="form-check-label" for="autopsy_yes">Yes</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="autopsy_required" id="autopsy_no" value="no">
+                                <label class="form-check-label" for="autopsy_no">No</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> Completing this form will transfer patient data to the hospital's mortality system and generate a death certificate. Family will be provided with instructions for mortuary services.
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('transfer.disposition', patient_id=patient.id) }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Disposition
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-file-medical-alt me-1"></i> Complete Death Certificate
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SiGeDe EMR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        margin-bottom: 1.5rem;
+    }
+    
+    .dashboard-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .stat-card {
+        border-left: 4px solid var(--bs-primary);
+        min-height: 100px;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        color: var(--bs-gray-500);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+    
+    .staff-list {
+        list-style: none;
+        padding-left: 0;
+    }
+    
+    .staff-list li {
+        padding: 0.5rem;
+        border-bottom: 1px solid var(--bs-gray-700);
+    }
+    
+    .staff-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 1rem;
+    }
+    
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        margin-right: 0.5rem;
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-chart-line me-2"></i>Emergency Department Dashboard</h2>
+            <p class="text-muted">Real-time statistics and performance metrics</p>
+        </div>
+        
+        <!-- Date Filter -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">Date: {{ today.strftime('%d-%m-%Y') }}</h5>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm">Today</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm">Week</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm">Month</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm">Year</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card stat-card dashboard-card">
+                    <div class="card-body">
+                        <h5 class="card-title stat-label">Patients Today</h5>
+                        <p class="stat-value">{{ total_patients_today }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card dashboard-card" style="border-color: #dc3545;">
+                    <div class="card-body">
+                        <h5 class="card-title stat-label">Red Triage</h5>
+                        <p class="stat-value">{{ triage_data[triage_labels.index('Red')] if 'Red' in triage_labels else 0 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card dashboard-card" style="border-color: #ffc107;">
+                    <div class="card-body">
+                        <h5 class="card-title stat-label">Yellow Triage</h5>
+                        <p class="stat-value">{{ triage_data[triage_labels.index('Yellow')] if 'Yellow' in triage_labels else 0 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card dashboard-card" style="border-color: #28a745;">
+                    <div class="card-body">
+                        <h5 class="card-title stat-label">Green Triage</h5>
+                        <p class="stat-value">{{ triage_data[triage_labels.index('Green')] if 'Green' in triage_labels else 0 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Patient Per Hour Chart -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-chart-bar me-2"></i>Patient Flow (Hourly)</h5>
+                        <div class="chart-container">
+                            <canvas id="hourlyPatientChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Triage Categories</h5>
+                        <div class="chart-container">
+                            <canvas id="triagePieChart"></canvas>
+                        </div>
+                        <div class="triage-legend mt-3 text-center">
+                            {% for label in triage_labels %}
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color: {{ triage_colors[loop.index0] }};"></span>
+                                <span>{{ label }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monthly Stats -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-calendar-alt me-2"></i>Monthly Patient Volume</h5>
+                        <div class="chart-container">
+                            <canvas id="monthlyPatientChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Staff Section -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-user-nurse me-2"></i>Nursing Staff On-Call</h5>
+                        <ul class="staff-list">
+                            {% for nurse in nurses %}
+                            <li>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-user-nurse me-2"></i> {{ nurse.full_name }}
+                                    </div>
+                                    <span class="badge bg-success">Active</span>
+                                </div>
+                            </li>
+                            {% else %}
+                            <li>No nurses currently on call</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-user-md me-2"></i>Doctor Patient Count</h5>
+                        <ul class="staff-list">
+                            {% for doctor in doctors %}
+                            <li>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-user-md me-2"></i> {{ doctor.doctor_name }}
+                                    </div>
+                                    <span class="badge bg-primary">{{ doctor.patient_count }} Patients</span>
+                                </div>
+                            </li>
+                            {% else %}
+                            <li>No doctors have seen patients yet</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Hours data
+    const hourlyCtx = document.getElementById('hourlyPatientChart').getContext('2d');
+    new Chart(hourlyCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ hours_labels|tojson }}.map(hour => `${hour}:00`),
+            datasets: [{
+                label: 'Patients per Hour',
+                data: {{ hours_data|tojson }},
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    
+    // Monthly data
+    const monthlyCtx = document.getElementById('monthlyPatientChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ month_labels|tojson }},
+            datasets: [{
+                label: 'Patients per Month',
+                data: {{ month_data|tojson }},
+                fill: true,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    
+    // Triage categories
+    const triageCtx = document.getElementById('triagePieChart').getContext('2d');
+    new Chart(triageCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ triage_labels|tojson }},
+            datasets: [{
+                data: {{ triage_data|tojson }},
+                backgroundColor: {{ triage_colors|tojson }},
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

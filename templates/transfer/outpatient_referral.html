@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Outpatient Referral - SiGeDe EMR{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="medical-header">
+            <h2><i class="fas fa-clinic-medical me-2"></i>Outpatient Referral</h2>
+            <p class="text-muted">Refer patient to specialist outpatient clinic</p>
+        </div>
+        
+        <!-- Patient Information Summary -->
+        <div class="patient-info-box mb-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h5>
+                    <p class="mb-1">
+                        <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%d-%m-%Y') }} 
+                        <strong>Gender:</strong> {{ patient.gender }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>MRN:</strong> {{ patient.medical_record_number or 'Not assigned' }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Triage:</strong> <span class="triage-badge triage-{{ patient.triage.category }}">{{ patient.triage.category|upper }}</span></p>
+                    <p class="mb-1"><strong>Diagnosis:</strong> {{ patient.doctor_examinations[0].assessment if patient.doctor_examinations else 'Not assessed' }}</p>
+                    <p class="mb-1"><strong>Disposition:</strong> <span class="badge bg-info">Outpatient Referral</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="fas fa-file-medical me-2"></i>Outpatient Clinic Referral</h5>
+                
+                <form method="POST" action="{{ url_for('transfer.outpatient_referral', patient_id=patient.id) }}">
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-hospital-user me-2"></i>Referral Details</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="clinic_referred_to" class="form-label">Specialist Clinic</label>
+                                <select class="form-select" id="clinic_referred_to" name="clinic_referred_to" required>
+                                    <option value="" {% if not disposition.clinic_referred_to %}selected{% endif %} disabled>Select clinic</option>
+                                    <option value="Cardiology" {% if disposition.clinic_referred_to == 'Cardiology' %}selected{% endif %}>Cardiology</option>
+                                    <option value="Orthopedics" {% if disposition.clinic_referred_to == 'Orthopedics' %}selected{% endif %}>Orthopedics</option>
+                                    <option value="Neurology" {% if disposition.clinic_referred_to == 'Neurology' %}selected{% endif %}>Neurology</option>
+                                    <option value="Pulmonology" {% if disposition.clinic_referred_to == 'Pulmonology' %}selected{% endif %}>Pulmonology</option>
+                                    <option value="Gastroenterology" {% if disposition.clinic_referred_to == 'Gastroenterology' %}selected{% endif %}>Gastroenterology</option>
+                                    <option value="Endocrinology" {% if disposition.clinic_referred_to == 'Endocrinology' %}selected{% endif %}>Endocrinology</option>
+                                    <option value="Nephrology" {% if disposition.clinic_referred_to == 'Nephrology' %}selected{% endif %}>Nephrology</option>
+                                    <option value="Urology" {% if disposition.clinic_referred_to == 'Urology' %}selected{% endif %}>Urology</option>
+                                    <option value="ENT" {% if disposition.clinic_referred_to == 'ENT' %}selected{% endif %}>ENT (Ear, Nose, Throat)</option>
+                                    <option value="Ophthalmology" {% if disposition.clinic_referred_to == 'Ophthalmology' %}selected{% endif %}>Ophthalmology</option>
+                                    <option value="Dermatology" {% if disposition.clinic_referred_to == 'Dermatology' %}selected{% endif %}>Dermatology</option>
+                                    <option value="Psychiatry" {% if disposition.clinic_referred_to == 'Psychiatry' %}selected{% endif %}>Psychiatry</option>
+                                    <option value="Oncology" {% if disposition.clinic_referred_to == 'Oncology' %}selected{% endif %}>Oncology</option>
+                                    <option value="General Surgery" {% if disposition.clinic_referred_to == 'General Surgery' %}selected{% endif %}>General Surgery</option>
+                                    <option value="Internal Medicine" {% if disposition.clinic_referred_to == 'Internal Medicine' %}selected{% endif %}>Internal Medicine</option>
+                                </select>
+                                <div class="form-text">Select the appropriate specialty clinic</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="appointment_date" class="form-label">Appointment Date/Time</label>
+                                <input type="datetime-local" class="form-control" id="appointment_date" name="appointment_date" value="{{ disposition.appointment_date.strftime('%Y-%m-%dT%H:%M') if disposition.appointment_date else '' }}">
+                                <div class="form-text">Leave blank if appointment will be scheduled later</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4 class="section-title"><i class="fas fa-clipboard me-2"></i>Summary for Specialist</h4>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Chief Complaint</h6>
+                                <p>{{ patient.nurse_assessments[0].chief_complaint if patient.nurse_assessments else 'Not documented' }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Diagnosis</h6>
+                                <p>{{ patient.doctor_examinations[0].assessment if patient.doctor_examinations else 'Not documented' }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <h6>Emergency Treatment Provided</h6>
+                                <p>{{ patient.doctor_examinations[0].plan if patient.doctor_examinations else 'Not documented' }}</p>
+                            </div>
+                        </div>
+                        
+                        {% if patient.lab_requests %}
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <h6>Relevant Test Results</h6>
+                                    <ul class="list-group">
+                                        {% for request in patient.lab_requests if request.is_completed %}
+                                            <li class="list-group-item">
+                                                <strong>{{ request.test_name }}</strong> ({{ request.completed_at.strftime('%d-%m-%Y') if request.completed_at }})
+                                                <button class="btn btn-sm btn-outline-secondary float-end" type="button" data-bs-toggle="collapse" data-bs-target="#result-{{ request.id }}">
+                                                    View
+                                                </button>
+                                                <div class="collapse mt-2" id="result-{{ request.id }}">
+                                                    <div class="card card-body bg-dark">
+                                                        <pre class="mb-0">{{ request.result }}</pre>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if patient.prescriptions %}
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <h6>Current Medications</h6>
+                                    <ul class="list-group">
+                                        {% for prescription in patient.prescriptions %}
+                                            <li class="list-group-item">
+                                                {{ prescription.medication_name }} {{ prescription.dosage }}, {{ prescription.route }}, {{ prescription.frequency }}
+                                                {% if prescription.duration %}({{ prescription.duration }}){% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('transfer.disposition', patient_id=patient.id) }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Disposition
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check-circle me-1"></i> Complete Referral
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
