@@ -2,6 +2,7 @@ import os
 import logging
 
 from flask import Flask
+from extensions import db
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from flask_login import LoginManager
